@@ -11,8 +11,6 @@ jobs:
       - run: docker build -t builder .
       - run: git clone --depth=1 --branch mosh-1.3.2 https://github.com/mobile-shell/mosh.git
       - run: docker run -v $PWD/mosh:/mosh -w /mosh --name=builder builder sh -c './autogen.sh && LDFLAGS=-static ./configure && make'
-      - run: ldd mosh/src/frontend/mosh-client || true
-      - run: ldd mosh/src/frontend/mosh-server || true
       - uses: actions/upload-artifact@v2
         with:
           name: mosh-server
@@ -28,6 +26,12 @@ jobs:
             echo '- [Build #${{ github.run_number }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})'
             echo '- [Workflow file](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/.github/workflows/autobuild.yml)'
             echo
+            echo '## Files'
+            echo '```'
+            (cd mosh/src/frontend && file mosh-server mosh-client)
+            echo '```'
+            echo
+            echo '## SHA256 Checksums'
             echo '```'
             (cd mosh/src/frontend && sha256sum mosh-server mosh-client)
             echo '```'
