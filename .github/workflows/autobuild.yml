@@ -13,8 +13,6 @@ jobs:
       - run: docker run -v $PWD/mosh:/mosh -w /mosh --name=builder builder sh -c './autogen.sh && LDFLAGS=-static ./configure && make'
       - run: ldd mosh/src/frontend/mosh-client || true
       - run: ldd mosh/src/frontend/mosh-server || true
-      - run: sha256sum mosh-server mosh-client
-        working-directory: mosh/src/frontend
       - uses: actions/upload-artifact@v2
         with:
           name: mosh-server
@@ -25,3 +23,38 @@ jobs:
           name: mosh-client
           path: mosh/src/frontend/mosh-client
           if-no-files-found: error
+      - run: |
+          (
+            echo '- [Build #${{ github.run_number }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})'
+            echo '- [Workflow file](https://github.com/${{ github.repository }}/blob/${{ github.sha }}/.github/workflows/autobuild.yml)'
+            echo
+            echo '```'
+            (cd mosh/src/frontend && sha256sum mosh-server mosh-client)
+            echo '```'
+          ) | tee release.md
+      - id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: run-${{ github.run_number }}
+          release_name: "Build #${{ github.run_number }}"
+          body_path: release.md
+          prerelease: false
+          draft: false
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: mosh/src/frontend/mosh-client
+          asset_name: mosh-client
+          asset_content_type: application/octet-stream
+      - uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: mosh/src/frontend/mosh-server
+          asset_name: mosh-server
+          asset_content_type: application/octet-stream
